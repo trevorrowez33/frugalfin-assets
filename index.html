@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Use interactive-widget=resizes-content so mobile keyboards/bars don't cover the footer -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>FrugalFin Finance</title>
+  
+  <!-- Standalone Mobile Web App & Status Bar Configuration -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FrugalFin">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- Direct PNG Icon Routing -->
+  <link rel="apple-touch-icon" sizes="180x180" href="https://i.imgur.com/qh9Cd6z.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="https://i.imgur.com/qh9Cd6z.png">
+  <link rel="shortcut icon" href="https://i.imgur.com/qh9Cd6z.png">
+
+  <style>
+    /* Fix: Use dynamic viewport height (dvh) and remove overflow clipping */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100dvh; /* Adapts to iOS Safari bottom bar dynamically */
+      background-color: #f3f4f6;
+      display: flex;
+      flex-direction: column;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      flex-grow: 1;
+      border: none;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <!-- Seamlessly embeds your Google Apps Script backend inside the wrapper -->
+  <iframe 
+    src="https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec" 
+    allow="clipboard-read; clipboard-write" 
+    title="FrugalFin Finance">
+  </iframe>
+</body>
+</html>
