@@ -60,9 +60,13 @@
   <meta name="mobile-web-app-capable" content="yes">
 
   <!-- Browser tab favicon. Separate from both of the above: the tab icon, the iOS
-       home-screen icon and the installed-app icon are three different lookups. -->
-  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+       home-screen icon and the installed-app icon are three different lookups.
+
+       `sizes="any"` RATHER THAN A NUMBER. All three uploaded PNGs are the same
+       2048x2048 export, and Chrome rejects an icon whose declared size does not match
+       its real pixels — it reported exactly that for the two numeric declarations that
+       used to be here. `any` makes no claim to be wrong about. -->
+  <link rel="icon" type="image/png" sizes="any" href="./icon-512.png">
 
   <style>
     /* `100dvh`, not `100vh`. On iOS Safari `vh` is the tallest the viewport ever gets,
