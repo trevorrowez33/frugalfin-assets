@@ -1,29 +1,78 @@
 <!DOCTYPE html>
+<!--
+  FrugalFin — the installable wrapper.
+
+  WHY THIS FILE EXISTS AT ALL. An Apps Script web app is served inside a nested
+  iframe: at `script.google.com/macros/s/.../exec` the TOP-LEVEL document belongs to
+  Google and Index.html runs in a child frame. Browsers read home-screen and install
+  metadata from the top-level document only, so no icon link, manifest link or
+  apple-* meta tag placed in Index.html can ever be seen by the installer. This page
+  is a top-level document the owner controls, which is the only place that metadata
+  can live. Install from THIS url, never from the /exec url.
+
+  THE ICONS AND THE MANIFEST ARE SERVED FROM THIS REPO, NOT FROM IMGUR, and that is
+  deliberate rather than cautious. Imgur's terms permit hotlinking on forums but not
+  the use of their images as content for a website, site elements included — a favicon
+  is a site element, so this use is inside what they block, and a blocked request
+  returns a 403 or a placeholder that the browser reports as simply no icon. Loading
+  the image by direct navigation proves nothing about it: a typed url sends no
+  cross-site referer, which is the signal hotlink protection tests. Same-origin files
+  have no policy to fall foul of and cannot be deleted by somebody else.
+
+  CHROME READS THE MANIFEST; SAFARI READS apple-touch-icon. Neither alone covers both,
+  so both are present. Desktop Chrome's "Install page as app" and Android's "Install
+  app" take the icon from the manifest's `icons` array and fall back to a generated
+  letter tile without it — which is what was happening. iOS Safari ignores the manifest
+  for the home-screen icon and uses `apple-touch-icon`.
+
+  NO SERVICE WORKER. One is needed for Chrome to offer an AUTOMATIC install prompt; it
+  is not needed for the manual "Install page as app", which is the route in use, and a
+  worker caching a page whose only content is a cross-origin iframe would buy nothing
+  and could serve a stale wrapper.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Use interactive-widget=resizes-content so mobile keyboards/bars don't cover the footer -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <!-- PINCH-ZOOM IS NOT DISABLED, and the previous `maximum-scale=1.0,
+       user-scalable=no` is gone on purpose. Blocking zoom fails WCAG 1.4.4, and on a
+       page whose entire content is a financial table that is a real loss, not a
+       theoretical one. `viewport-fit=cover` keeps the layout under the notch;
+       `interactive-widget=resizes-content` makes the on-screen keyboard shrink the
+       viewport instead of sliding the page up, which is what the original comment in
+       this file intended but the tag never carried. -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+
   <title>FrugalFin Finance</title>
-  
-  <!-- Standalone Mobile Web App & Status Bar Configuration -->
+  <meta name="theme-color" content="#4f46e5">
+
+  <!-- CHROME AND ANDROID: the manifest is the only source of the installed icon.
+       Relative, so it works from any repository path or custom domain. -->
+  <link rel="manifest" href="./manifest.webmanifest">
+
+  <!-- IOS SAFARI: reads this and not the manifest. 180x180, and it must be OPAQUE —
+       iOS composites a transparent PNG onto black. -->
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FrugalFin">
   <meta name="mobile-web-app-capable" content="yes">
 
-  <!-- Direct PNG Icon Routing -->
-  <link rel="apple-touch-icon" sizes="180x180" href="https://i.imgur.com/qh9Cd6z.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="https://i.imgur.com/qh9Cd6z.png">
-  <link rel="shortcut icon" href="https://i.imgur.com/qh9Cd6z.png">
+  <!-- Browser tab favicon. Separate from both of the above: the tab icon, the iOS
+       home-screen icon and the installed-app icon are three different lookups. -->
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
 
   <style>
-    /* Fix: Use dynamic viewport height (dvh) and remove overflow clipping */
+    /* `100dvh`, not `100vh`. On iOS Safari `vh` is the tallest the viewport ever gets,
+       so a `100vh` child sits partly behind the bottom bar and the app's own bottom
+       navigation ends up unreachable. `dvh` tracks the bar as it appears. */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
-      height: 100dvh; /* Adapts to iOS Safari bottom bar dynamically */
+      height: 100dvh;
       background-color: #f3f4f6;
       display: flex;
       flex-direction: column;
@@ -38,10 +87,17 @@
   </style>
 </head>
 <body>
-  <!-- Seamlessly embeds your Google Apps Script backend inside the wrapper -->
-  <iframe 
-    src="https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec" 
-    allow="clipboard-read; clipboard-write" 
+  <!-- The Apps Script app. Framing is permitted because `doGet` sets
+       `XFrameOptionsMode.ALLOWALL`; without that this page would render blank.
+
+       `allow` delegates clipboard permission down to the framed document, which the
+       Copy Venmo/iMessage Request button needs. It may still be refused one frame
+       further in, inside Google's own sandboxed panel — which is why that button has a
+       selection-based fallback and then a visible text box, rather than trusting the
+       permission to arrive. -->
+  <iframe
+    src="https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec"
+    allow="clipboard-read; clipboard-write"
     title="FrugalFin Finance">
   </iframe>
 </body>
