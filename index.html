@@ -1,108 +1,134 @@
 <!DOCTYPE html>
 <!--
-  FrugalFin — the installable wrapper.
+  FrugalFin — the installable launcher.
 
-  WHY THIS FILE EXISTS AT ALL. An Apps Script web app is served inside a nested
-  iframe: at `script.google.com/macros/s/.../exec` the TOP-LEVEL document belongs to
-  Google and Index.html runs in a child frame. Browsers read home-screen and install
-  metadata from the top-level document only, so no icon link, manifest link or
-  apple-* meta tag placed in Index.html can ever be seen by the installer. This page
-  is a top-level document the owner controls, which is the only place that metadata
-  can live. Install from THIS url, never from the /exec url.
+  WHY THIS FILE EXISTS. An Apps Script web app is served inside a nested iframe: at
+  `/exec` the TOP-LEVEL document belongs to Google and Index.html runs in a child
+  frame. Browsers read home-screen and install metadata from the top-level document
+  only, so no icon link, manifest link or apple-* meta tag placed in Index.html can
+  ever be seen by the installer. This page is a top-level document the owner controls,
+  which is the only place that metadata can live. Install from THIS url.
 
-  THE ICONS AND THE MANIFEST ARE SERVED FROM THIS REPO, NOT FROM IMGUR, and that is
-  deliberate rather than cautious. Imgur's terms permit hotlinking on forums but not
-  the use of their images as content for a website, site elements included — a favicon
-  is a site element, so this use is inside what they block, and a blocked request
-  returns a 403 or a placeholder that the browser reports as simply no icon. Loading
-  the image by direct navigation proves nothing about it: a typed url sends no
-  cross-site referer, which is the signal hotlink protection tests. Same-origin files
-  have no policy to fall foul of and cannot be deleted by somebody else.
+  ============================================================================
+  IT REDIRECTS. IT USED TO FRAME THE APP, AND FRAMING DOES NOT WORK.
+  ============================================================================
+  The earlier version of this file embedded `/exec` in an <iframe>. That returned a
+  Google 401 for the second household member in BOTH Safari and Chrome, while the raw
+  `/exec` url opened fine for her in BOTH — which is the measurement that settles it:
+  the failure is not the device, not the browser, and not the deployment's access
+  setting, which is "Anyone with a Google account".
 
-  CHROME READS THE MANIFEST; SAFARI READS apple-touch-icon. Neither alone covers both,
-  so both are present. Desktop Chrome's "Install page as app" and Android's "Install
-  app" take the icon from the manifest's `icons` array and fall back to a generated
-  letter tile without it — which is what was happening. iOS Safari ignores the manifest
-  for the home-screen icon and uses `apple-touch-icon`.
+  The deployment runs as "User accessing the web app", so Google must identify the
+  caller on every request. A cross-origin frame does not carry that session: browsers
+  partition or block third-party cookies by default, and Google will not render its
+  own sign-in or consent screens inside a frame at all, so there is no way for the
+  request to become authenticated from in here. Google answers 401 and the frame is
+  blank. There is nothing to configure — an authenticated Apps Script web app cannot be
+  framed by a third-party origin.
 
-  NO SERVICE WORKER. One is needed for Chrome to offer an AUTOMATIC install prompt; it
-  is not needed for the manual "Install page as app", which is the route in use, and a
-  worker caching a page whose only content is a cross-origin iframe would buy nothing
-  and could serve a stale wrapper.
+  WHAT THIS COSTS, STATED PLAINLY. Navigating to another origin leaves the installed
+  app's scope. On iOS the app opens in Safari with its browser bars visible instead of
+  standalone; on Android Chrome it stays in the app window but gains a small url bar.
+  The home-screen icon and the app name — the thing this wrapper exists for — still
+  work. Full standalone chrome and a working app for two people are mutually exclusive
+  here, and a blank 401 is not a tradeoff worth keeping.
+
+  THE ALTERNATIVE WAS REJECTED. Framing works if the deployment is set to run as the
+  owner with access "Anyone", because then no login is needed. But Api.resolveCaller_()
+  identifies people through Session.getActiveUser().getEmail() and checks them against
+  the Requirement 9 allowlist; with anonymous access that email is empty, every caller
+  is denied, and opening the access up to anyone with the link would put the
+  household's finances behind no check at all. Not a trade to make for browser chrome.
+
+  THE URL BELOW IS A COPY. Publishing a new VERSION of the deployment keeps it;
+  creating a new DEPLOYMENT does not. Re-upload this file whenever a new deployment is
+  created — it is the one file the paste checklist does not cover.
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
 
-  <!-- PINCH-ZOOM IS NOT DISABLED, and the previous `maximum-scale=1.0,
-       user-scalable=no` is gone on purpose. Blocking zoom fails WCAG 1.4.4, and on a
-       page whose entire content is a financial table that is a real loss, not a
-       theoretical one. `viewport-fit=cover` keeps the layout under the notch;
-       `interactive-widget=resizes-content` makes the on-screen keyboard shrink the
-       viewport instead of sliding the page up, which is what the original comment in
-       this file intended but the tag never carried. -->
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+  <!-- PINCH-ZOOM IS NOT DISABLED. An earlier version carried `maximum-scale=1.0,
+       user-scalable=no`; blocking zoom fails WCAG 1.4.4, and on a page of financial
+       figures that is a real loss rather than a theoretical one. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
   <title>FrugalFin Finance</title>
   <meta name="theme-color" content="#4f46e5">
 
+  <!-- REDIRECT, THREE WAYS, IN DESCENDING ORDER OF SPEED. `location.replace` leaves no
+       history entry, so the phone's back gesture does not land the user back on this
+       page in a loop. The meta refresh covers scripting being off. The link covers
+       both failing, because a launcher that silently does nothing is worse than one
+       that asks for a tap. -->
+  <script>
+    window.location.replace('https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec');
+  </script>
+  <noscript>
+    <meta http-equiv="refresh"
+          content="0; url=https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec">
+  </noscript>
+
   <!-- CHROME AND ANDROID: the manifest is the only source of the installed icon.
-       Relative, so it works from any repository path or custom domain. -->
+       Relative, so it works from any repository path or a custom domain. -->
   <link rel="manifest" href="./manifest.webmanifest">
 
-  <!-- IOS SAFARI: reads this and not the manifest. 180x180, and it must be OPAQUE —
-       iOS composites a transparent PNG onto black. -->
-  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+  <!-- IOS SAFARI: reads this and not the manifest. Opaque — iOS composites a
+       transparent PNG onto black. -->
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FrugalFin">
   <meta name="mobile-web-app-capable" content="yes">
 
-  <!-- Browser tab favicon. Separate from both of the above: the tab icon, the iOS
-       home-screen icon and the installed-app icon are three different lookups.
+  <!-- Browser tab favicon. The tab icon, the iOS home-screen icon and the installed
+       app icon are three separate lookups.
 
-       `sizes="any"` RATHER THAN A NUMBER. All three uploaded PNGs are the same
-       2048x2048 export, and Chrome rejects an icon whose declared size does not match
-       its real pixels — it reported exactly that for the two numeric declarations that
-       used to be here. `any` makes no claim to be wrong about. -->
+       `sizes="any"` MAKES NO CLAIM TO BE WRONG ABOUT. Chrome rejects an icon whose
+       declared size does not match its real pixels, and it reported exactly that twice
+       while these files were being re-exported. The manifest declares 512x512 because
+       Chrome itself confirmed that is what the file now is. -->
   <link rel="icon" type="image/png" sizes="any" href="./icon-512.png">
 
   <style>
-    /* `100dvh`, not `100vh`. On iOS Safari `vh` is the tallest the viewport ever gets,
-       so a `100vh` child sits partly behind the bottom bar and the app's own bottom
-       navigation ends up unreachable. `dvh` tracks the bar as it appears. */
+    /* This page is visible for a moment at most, and for longer only if both
+       redirects failed. It has to be legible in that case rather than a white flash
+       with a stranded link in the corner. */
     html, body {
       margin: 0;
       padding: 0;
-      width: 100%;
-      height: 100dvh;
+      min-height: 100dvh;
       background-color: #f3f4f6;
+      color: #374151;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
     }
-    iframe {
-      width: 100%;
-      height: 100%;
-      flex-grow: 1;
-      border: none;
-      display: block;
+    h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+    p  { font-size: 0.875rem; color: #6b7280; margin: 0 0 1.5rem; }
+    a.launch {
+      display: inline-block;
+      background: #4f46e5;
+      color: #ffffff;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 0.875rem 1.5rem;
+      border-radius: 0.5rem;
+      /* 44px minimum target, the same floor the app's own navigation uses. */
+      min-height: 44px;
+      min-width: 44px;
     }
   </style>
 </head>
 <body>
-  <!-- The Apps Script app. Framing is permitted because `doGet` sets
-       `XFrameOptionsMode.ALLOWALL`; without that this page would render blank.
-
-       `allow` delegates clipboard permission down to the framed document, which the
-       Copy Venmo/iMessage Request button needs. It may still be refused one frame
-       further in, inside Google's own sandboxed panel — which is why that button has a
-       selection-based fallback and then a visible text box, rather than trusting the
-       permission to arrive. -->
-  <iframe
-    src="https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec"
-    allow="clipboard-read; clipboard-write"
-    title="FrugalFin Finance">
-  </iframe>
+  <h1>FrugalFin</h1>
+  <p>Opening&hellip;</p>
+  <a class="launch"
+     href="https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec">
+    Open FrugalFin
+  </a>
 </body>
 </html>
