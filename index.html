@@ -7,42 +7,49 @@
   frame. Browsers read home-screen and install metadata from the top-level document
   only, so no icon link, manifest link or apple-* meta tag placed in Index.html can
   ever be seen by the installer. This page is a top-level document the owner controls,
-  which is the only place that metadata can live. Install from THIS url.
+  which is the only place that metadata can live.
 
   ============================================================================
-  IT REDIRECTS. IT USED TO FRAME THE APP, AND FRAMING DOES NOT WORK.
+  IT DOES NOT FRAME THE APP, AND IT NO LONGER REDIRECTS ON SIGHT EITHER.
   ============================================================================
-  The earlier version of this file embedded `/exec` in an <iframe>. That returned a
-  Google 401 for the second household member in BOTH Safari and Chrome, while the raw
-  `/exec` url opened fine for her in BOTH — which is the measurement that settles it:
-  the failure is not the device, not the browser, and not the deployment's access
-  setting, which is "Anyone with a Google account".
 
-  The deployment runs as "User accessing the web app", so Google must identify the
-  caller on every request. A cross-origin frame does not carry that session: browsers
-  partition or block third-party cookies by default, and Google will not render its
-  own sign-in or consent screens inside a frame at all, so there is no way for the
-  request to become authenticated from in here. Google answers 401 and the frame is
-  blank. There is nothing to configure — an authenticated Apps Script web app cannot be
-  framed by a third-party origin.
+  FRAMING WAS THE FIRST DESIGN AND IT RETURNED 401. The second household member got a
+  Google 401 from the framed `/exec` in BOTH Safari and Chrome while the raw url opened
+  fine for her in BOTH, which settles it: not the device, not the browser, not the
+  deployment — which is "Execute as: User accessing the web app / Anyone with a Google
+  account". Google must identify the caller on every request; a cross-origin frame does
+  not carry that session, because browsers partition or block third-party cookies by
+  default and Google will not render its sign-in or consent screens in a frame at all.
+  An authenticated Apps Script web app cannot be framed by a third-party origin.
 
-  WHAT THIS COSTS, STATED PLAINLY. Navigating to another origin leaves the installed
-  app's scope. On iOS the app opens in Safari with its browser bars visible instead of
-  standalone; on Android Chrome it stays in the app window but gains a small url bar.
-  The home-screen icon and the app name — the thing this wrapper exists for — still
-  work. Full standalone chrome and a working app for two people are mutually exclusive
-  here, and a blank 401 is not a tradeoff worth keeping.
+  AN UNCONDITIONAL REDIRECT THEN BROKE THE ICON, which was the whole point of the file.
+  On iOS, "Add to Home Screen" reads the metadata of the page CURRENTLY ON SCREEN. This
+  page redirected on load, so by the time anybody could reach the Share menu they were
+  already on Google's `/exec` page — and iOS read Google's metadata, found no
+  apple-touch-icon, and generated a letter tile. The icon files were fine the whole
+  time; they were never being consulted.
 
-  THE ALTERNATIVE WAS REJECTED. Framing works if the deployment is set to run as the
-  owner with access "Anyone", because then no login is needed. But Api.resolveCaller_()
-  identifies people through Session.getActiveUser().getEmail() and checks them against
-  the Requirement 9 allowlist; with anonymous access that email is empty, every caller
-  is denied, and opening the access up to anyone with the link would put the
-  household's finances behind no check at all. Not a trade to make for browser chrome.
+  SO THE REDIRECT IS NOW CONDITIONAL ON ALREADY BEING INSTALLED. Opened in a browser
+  tab this page stays put and offers the install, which is the one moment its metadata
+  has to be on screen. Launched from the home screen it forwards straight through, so
+  the extra tap only ever costs the person doing the installing.
 
-  THE URL BELOW IS A COPY. Publishing a new VERSION of the deployment keeps it;
-  creating a new DEPLOYMENT does not. Re-upload this file whenever a new deployment is
-  created — it is the one file the paste checklist does not cover.
+  WHAT REMAINS A COST. Navigating to another origin leaves the installed app's scope: on
+  iOS the app opens in Safari with its bars visible rather than standalone, and on
+  Android Chrome it keeps the app window but gains a small url bar. Full standalone
+  chrome and a working app for two people are mutually exclusive here. The icon and the
+  app name still work, which is what this file is for.
+
+  THE ALTERNATIVE WAS REJECTED ON SECURITY. Framing works if the deployment runs as the
+  owner with access "Anyone", because then nobody logs in. But `Api.resolveCaller_()`
+  identifies people through `Session.getActiveUser().getEmail()` and checks them against
+  the Requirement 9 allowlist; with anonymous access that email is empty, every caller is
+  denied, and opening access to anyone holding the link would put the household's
+  finances behind no check at all. Not a trade to make for browser chrome.
+
+  THE URL BELOW IS A COPY. Publishing a new VERSION of the deployment keeps it; creating
+  a new DEPLOYMENT does not. Re-upload this file whenever a new deployment is created —
+  it is the one file the paste checklist does not cover.
 -->
 <html lang="en">
 <head>
@@ -56,24 +63,12 @@
   <title>FrugalFin Finance</title>
   <meta name="theme-color" content="#4f46e5">
 
-  <!-- REDIRECT, THREE WAYS, IN DESCENDING ORDER OF SPEED. `location.replace` leaves no
-       history entry, so the phone's back gesture does not land the user back on this
-       page in a loop. The meta refresh covers scripting being off. The link covers
-       both failing, because a launcher that silently does nothing is worse than one
-       that asks for a tap. -->
-  <script>
-    window.location.replace('https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec');
-  </script>
-  <noscript>
-    <meta http-equiv="refresh"
-          content="0; url=https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec">
-  </noscript>
-
   <!-- CHROME AND ANDROID: the manifest is the only source of the installed icon.
        Relative, so it works from any repository path or a custom domain. -->
   <link rel="manifest" href="./manifest.webmanifest">
 
-  <!-- IOS SAFARI: reads this and not the manifest. Opaque — iOS composites a
+  <!-- IOS SAFARI: reads this and not the manifest, and reads it from whichever page is
+       on screen when Add to Home Screen is tapped. Opaque — iOS composites a
        transparent PNG onto black. -->
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -85,15 +80,12 @@
        app icon are three separate lookups.
 
        `sizes="any"` MAKES NO CLAIM TO BE WRONG ABOUT. Chrome rejects an icon whose
-       declared size does not match its real pixels, and it reported exactly that twice
+       declared size does not match its real pixels and reported exactly that twice
        while these files were being re-exported. The manifest declares 512x512 because
-       Chrome itself confirmed that is what the file now is. -->
+       Chrome itself confirmed that is what the file is. -->
   <link rel="icon" type="image/png" sizes="any" href="./icon-512.png">
 
   <style>
-    /* This page is visible for a moment at most, and for longer only if both
-       redirects failed. It has to be legible in that case rather than a white flash
-       with a stranded link in the corner. */
     html, body {
       margin: 0;
       padding: 0;
@@ -106,29 +98,82 @@
       align-items: center;
       justify-content: center;
       text-align: center;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
     }
-    h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
-    p  { font-size: 0.875rem; color: #6b7280; margin: 0 0 1.5rem; }
+    img.mark { width: 88px; height: 88px; border-radius: 1.25rem; }
+    h1 { font-size: 1.5rem; margin: 1rem 0 0.25rem; }
+    p.lead { font-size: 0.9375rem; color: #6b7280; margin: 0 0 1.5rem; }
     a.launch {
       display: inline-block;
       background: #4f46e5;
       color: #ffffff;
       font-weight: 700;
+      font-size: 1rem;
       text-decoration: none;
-      padding: 0.875rem 1.5rem;
+      padding: 0.875rem 2rem;
       border-radius: 0.5rem;
-      /* 44px minimum target, the same floor the app's own navigation uses. */
+      /* The 44px floor the app's own navigation uses. */
       min-height: 44px;
       min-width: 44px;
     }
+    /* The install hint is guidance, not chrome. It is hidden in the installed app,
+       where it would be telling somebody to do what they have already done. */
+    .hint {
+      margin-top: 2rem;
+      font-size: 0.8125rem;
+      color: #9ca3af;
+      line-height: 1.6;
+      max-width: 22rem;
+    }
+    .hint b { color: #6b7280; }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
+  <!-- The icon is on the page deliberately. It is the one visual confirmation that the
+       file iOS is about to read actually loaded: a broken image here means a letter
+       tile on the home screen, and it says so before the install rather than after. -->
+  <img class="mark" src="./icon-512.png" alt="FrugalFin">
   <h1>FrugalFin</h1>
-  <p>Opening&hellip;</p>
-  <a class="launch"
+  <p class="lead" id="lead">Household spending, goals and investments.</p>
+
+  <a class="launch" id="launch"
      href="https://script.google.com/macros/s/AKfycbw9J4ySaWmWVxvleoTByXWciRgCG0YbcFVtTgb91eDYQWBnrvMqgtNH8f9eoo69G9U9/exec">
     Open FrugalFin
   </a>
+
+  <div class="hint" id="hint">
+    <p>To keep this on your home screen with its icon, install it
+       <b>from this page</b> &mdash; not from the app itself.</p>
+    <p><b>iPhone:</b> Share &rarr; Add to Home Screen.<br>
+       <b>Android or desktop Chrome:</b> menu &rarr; Install page as app.</p>
+  </div>
+
+  <script>
+    (function () {
+      var target = document.getElementById('launch').getAttribute('href');
+
+      // ALREADY INSTALLED? Then this page is a waypoint and should not be read.
+      // `navigator.standalone` is iOS's answer and predates display-mode; the media
+      // queries are everyone else's. `minimal-ui` and `fullscreen` count, because a
+      // launcher that forwards only from `standalone` would strand anyone whose
+      // platform chose a different shell for the same installed app.
+      var installed =
+        window.navigator.standalone === true ||
+        (window.matchMedia && (
+          window.matchMedia('(display-mode: standalone)').matches ||
+          window.matchMedia('(display-mode: fullscreen)').matches ||
+          window.matchMedia('(display-mode: minimal-ui)').matches));
+
+      if (!installed) { return; }
+
+      // `replace`, not `assign`: no history entry, so a back gesture inside the app
+      // cannot land here and bounce forward again in a loop.
+      document.getElementById('lead').textContent = 'Opening\u2026';
+      document.getElementById('hint').hidden = true;
+      window.location.replace(target);
+    })();
+  </script>
 </body>
 </html>
